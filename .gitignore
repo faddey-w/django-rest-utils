@@ -1,0 +1,2 @@
+*.py[oc]
+django_rest_utils.egg-info
