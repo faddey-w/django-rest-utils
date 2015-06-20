@@ -1,2 +1,3 @@
 *.py[oc]
-django_rest_utils.egg-info
+django_rest_utils.egg-infoplay.py
+play.py
