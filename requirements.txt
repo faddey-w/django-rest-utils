@@ -1,0 +1,10 @@
+Django==1.7
+django-nose==1.4
+djangorestframework==3.1.2
+mock==1.0.1
+nose==1.3.7
+requests==2.7.0
+python-social-auth==0.2.10
+
+# this is optional. i just like use "fab play" for interactive testing
+# Fabric==1.10.2
