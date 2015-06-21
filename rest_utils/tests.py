@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 from mock import Mock
-from unittest.case import _AssertRaisesContext
+from unittest import skip
 
 from django.http import Http404
-from django_nose import FastFixtureTestCase as TestCase
+# from django_nose import FastFixtureTestCase as TestCase
+from django.test import TestCase
 
 from .permissions import DenyCreateOnPutPermission, NotAuthenticatedPermission
 from .decorators import raise_on_false
 
 
+@skip
 class PermissionsTest(TestCase):
     def test_deny_create_on_put_permission(self):
         permission = DenyCreateOnPutPermission()
@@ -78,3 +80,18 @@ class RaiseOnFalseTest(TestCase):
         self.assertNotRaises(never_raises)
         self.assertNotRaises(never_raises, raise_exception=True)
         self.assertNotRaises(never_raises, raise_exception=False)
+
+    def test_on_exception(self):
+        reverse = lambda seq: seq[::-1]
+        arg = 'argument'
+
+        decorator = raise_on_false()
+        f = decorator(Mock(return_value=False))
+
+        handler = lambda sed: ([reverse(sed)], {})
+        f.on_exception(handler)
+
+        self.assertRaisesMessage(
+            BaseException, reverse(arg),
+            f, arg, raise_exception=True
+        )
