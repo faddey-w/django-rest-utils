@@ -216,3 +216,27 @@ class CachedPropertyTestCase(AssertNotRaisesMixin, TestCase):
 
         obj = Class()
 
+        obj.data = 1
+        self.assertEqual(obj.prop, 1)
+        obj.prop = 2
+        self.assertEqual(obj.prop, 2)
+
+    def test_deleter(self):
+        class Class(object):
+            data = None
+
+            @cached_property
+            def prop(self):
+                return self.data
+
+            @prop.deleter
+            def prop(self):
+                del self.data
+
+        obj = Class()
+
+        obj.data = 1
+        self.assertEqual(obj.prop, 1)
+        del obj.prop
+        self.assertFalse(Class.prop.is_cached(obj))
+        self.assertEqual(obj.prop, None)
