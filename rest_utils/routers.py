@@ -1,7 +1,6 @@
 __author__ = 'faddey'
 
 from rest_framework.routers import DefaultRouter
-from rest_framework.decorators import detail_route, list_route
 
 
 class ModifiableRouterMixin(object):
