@@ -6,18 +6,29 @@ from rest_framework.pagination import LimitOffsetPagination
 from .models import NestedEntity, PrimaryEntity, DeeplyNestedEntity
 from .serializers import PrimaryEntitySerializer, NestedEntitySerializer, DeeplyNestedEntitySerializer
 
+# For generated urlconf
 
-class DeeplyNestedViewSet(ListModelMixin,
-                          RetrieveModelMixin,
-                          CreateModelMixin,
-                          GenericViewSet):
 
-    queryset = DeeplyNestedEntity.objects.all()
-    serializer_class = DeeplyNestedEntitySerializer
+class CreateReadViewSet(ListModelMixin,
+                        RetrieveModelMixin,
+                        CreateModelMixin,
+                        GenericViewSet):
+
     pagination_class = LimitOffsetPagination
 
 
-class NestedViewSet(DeeplyNestedViewSet):
+class DeeplyNestedViewSet(CreateReadViewSet):
+
+    queryset = DeeplyNestedEntity.objects.all()
+    serializer_class = DeeplyNestedEntitySerializer
+
+    def retrieve(self, request, pk, arg_one):
+        resp = super(DeeplyNestedViewSet, self).retrieve(request, pk, arg_one)
+        resp['X-Arg-One'] = arg_one
+        return resp
+
+
+class NestedViewSet(CreateReadViewSet):
 
     nested_viewsets = {
         'bar': {
@@ -29,8 +40,14 @@ class NestedViewSet(DeeplyNestedViewSet):
     queryset = NestedEntity.objects.all()
     serializer_class = NestedEntitySerializer
 
+    def retrieve(self, request, pk, arg_one, arg_two):
+        resp = super(NestedViewSet, self).retrieve(request, pk, arg_one, arg_two)
+        resp['X-Arg-One'] = arg_one
+        resp['X-Arg-Two'] = arg_two
+        return resp
 
-class PrimaryViewSet(NestedViewSet):
+
+class PrimaryViewSet(CreateReadViewSet):
     nested_viewsets = {
         'foo': {
             'viewset': NestedViewSet,
@@ -40,4 +57,3 @@ class PrimaryViewSet(NestedViewSet):
 
     queryset = PrimaryEntity.objects.all()
     serializer_class = PrimaryEntitySerializer
-    pagination_class = LimitOffsetPagination

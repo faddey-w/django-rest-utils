@@ -3,7 +3,7 @@ import os
 import sys
 
 if __name__ == "__main__":
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "dummy.project.settings")
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "demo.project.settings")
     root_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     sys.path.append(root_dir)
 

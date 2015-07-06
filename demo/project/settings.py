@@ -39,7 +39,7 @@ INSTALLED_APPS = (
 
     'rest_framework',
 
-    'dummy.application',
+    'demo.application',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -52,9 +52,9 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
 
-ROOT_URLCONF = 'dummy.project.urls'
+ROOT_URLCONF = 'demo.project.urls'
 
-WSGI_APPLICATION = 'dummy.project.wsgi.application'
+WSGI_APPLICATION = 'demo.project.wsgi.application'
 
 
 # Database

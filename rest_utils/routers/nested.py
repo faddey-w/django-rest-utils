@@ -1,3 +1,6 @@
+"""
+Implementation notes
+"""  # TODO add implementation notes
 __author__ = 'faddey'
 
 import inspect
@@ -5,7 +8,7 @@ import re
 from collections import namedtuple
 
 from django.conf.urls import url, include
-from rest_framework.routers import SimpleRouter as DefaultRouter
+from rest_framework.routers import DefaultRouter
 from rest_framework.viewsets import ViewSetMixin
 
 from ..functions import safecall
@@ -13,19 +16,18 @@ from ..functions import safecall
 
 NestedViewSetInfo = namedtuple('NestedViewSetInfo', ['viewset', 'base_name', 'detail', 'uses_kwargs'])
 
-
-def _get_parent(viewset):
-    parent_attr_name = getattr(viewset, 'parent_attr_name', None)
-    if parent_attr_name:
-        return getattr(viewset, parent_attr_name, None)
-    return None
-
 _lookup_kwarg_regex = re.compile(r'^__nested_lookup(?P<depth>\d+)$')
 
 def _get_depth(kwarg_name):
     m = re.match(_lookup_kwarg_regex, kwarg_name)
     if m:
         return int(m.groupdict()['depth'])
+    return None
+
+def _get_parent(viewset):
+    parent_attr_name = getattr(viewset, 'parent_attr_name', None)
+    if parent_attr_name:
+        return getattr(viewset, parent_attr_name, None)
     return None
 
 def _build_parents_seq(nested_viewset, attr_name):
@@ -41,6 +43,7 @@ def _build_parents_seq(nested_viewset, attr_name):
 def _get_lookup_kwarg(viewset):
     lookup_field = getattr(viewset, 'lookup_field', 'pk')
     return getattr(viewset, 'lookup_url_kwarg', None) or lookup_field
+
 
 class NestedViewSetMixin(object):
 
@@ -85,8 +88,11 @@ class NestingRouterMixin(object):
 
     """
     This mixin used for creating routers that supports nested resources,
-    i.e. urls like "/post/123/comment/1532".
-    """
+    i.e. urls like "/post/123/comment/1532/".
+
+    For usage example you can see demo django project at branch "feature_nested_resources"
+    in my github repo
+    """  # TODO add reference to repo
 
     nested_views_router_class = DefaultRouter
     parent_attr_name = 'parent'
@@ -173,9 +179,7 @@ class NestingRouterMixin(object):
     def _parse_entry(self, node_name, entry):
         if isinstance(entry, NestedViewSetInfo):
             return entry
-        if isinstance(entry, ViewSetMixin) or \
-                (inspect.isclass(entry)
-                 and issubclass(entry, ViewSetMixin)):
+        if inspect.isclass(entry) and issubclass(entry, ViewSetMixin):
             ret = NestedViewSetInfo(
                 viewset=entry,
                 base_name=safecall(self.get_default_base_name, entry) or node_name,
