@@ -2,3 +2,4 @@
 2. Write nice docstrings for all project
 3. Add support for cases when nested resource wants to use all kwargs. Maybe make this case default?
 4. Add automated tests for nested router (they must cover all features and cases)
+5. Test functions.endpoint
