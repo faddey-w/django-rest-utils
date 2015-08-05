@@ -1,57 +1,108 @@
 from django.test import TestCase
 
 from ..decorators import cached_property
-from ..decorators.cached_property import (read_only_cached_property,
-                                          read_write_cached_property)
 
 from .base import AssertNotRaisesMixin
 
 
 class CachedPropertyTestCase(AssertNotRaisesMixin, TestCase):
 
-    def test_magic(self):
-
-        def function():
-            f = lambda *args, **kwargs: None
-            f.__name__ = 'name'
-            return f
-
-        # cannot resolve property name
-        self.assertRaises(AssertionError, cached_property)
-
-        empty = cached_property(name='empty')
-        self.assertIsInstance(empty, read_only_cached_property)
-        self.assertNotIsInstance(empty, read_write_cached_property)
-
-        read_only = cached_property(function())
-        self.assertIsInstance(read_only, read_only_cached_property)
-        self.assertNotIsInstance(read_only, read_write_cached_property)
-
-        read_write = read_only.setter(function())
-        self.assertIsInstance(read_write, read_write_cached_property)
-
-        read_write = read_only.deleter(function())
-        self.assertIsInstance(read_write, read_write_cached_property)
-
-        props = [
-            cached_property(fset=function()),
-            cached_property(fdel=function()),
-            cached_property(fset=function(), fdel=function()),
-            cached_property(fget=function(), fset=function()),
-            cached_property(fget=function(), fdel=function()),
-            cached_property(fget=function(), fset=function(), fdel=function()),
-        ]
-        for read_write in props:
-            self.assertIsInstance(read_write, read_write_cached_property)
-
-    def test_caching(self):
+    @classmethod
+    def setUpClass(cls):
 
         class Class(object):
+
             data = None
 
-            @cached_property
-            def prop(self):
-                return self.data
+            read_only = cached_property(
+                fget=lambda this: this.data,
+            )
+
+            write_only = cached_property(
+                fset=lambda this, value: setattr(this, 'data', value),
+            )
+
+            del_only = cached_property(
+                fdel=lambda this: delattr(this, 'data'),
+            )
+
+            read_write = cached_property(
+                fget=lambda this: this.data,
+                fset=lambda this, value: setattr(this, 'data', value),
+            )
+
+            read_del = cached_property(
+                fget=lambda this: this.data,
+                fdel=lambda this: delattr(this, 'data'),
+            )
+
+            write_del = cached_property(
+                fset=lambda this, value: setattr(this, 'data', value),
+                fdel=lambda this: delattr(this, 'data'),
+            )
+
+            prop = cached_property(
+                fget=lambda this: this.data,
+                fset=lambda this, value: setattr(this, 'data', value),
+                fdel=lambda this: delattr(this, 'data'),
+            )
+
+        cls.Class = Class
+
+    def setUp(self):
+        self.obj = self.Class()
+
+    def tearDown(self):
+        del self.obj
+
+    def test_access(self):
+        """
+        This test checks that @cached_property
+        cannot be read if no fget is specified,
+        cannot be assigned if no fset is specified
+         and cannot be deleted if no fdel is specified.
+        """
+        getter = lambda attr: (lambda: getattr(self.obj, attr))
+        setter = lambda attr: (lambda value: setattr(self.obj, attr, value))
+        deleter = lambda attr: (lambda: delattr(self.obj, attr))
+
+        self.assertNotRaises(getter('read_only'))
+        self.assertRaises(AttributeError, setter('read_only'), 1)
+        self.assertRaises(AttributeError, deleter('read_only'))
+
+        self.assertRaises(AttributeError, getter('write_only'))
+        self.assertNotRaises(setter('write_only'), 1)
+        self.assertRaises(AttributeError, deleter('write_only'))
+
+        self.assertRaises(AttributeError, getter('del_only'))
+        self.assertRaises(AttributeError, setter('del_only'), 1)
+        self.assertNotRaises(deleter('del_only'))
+
+        self.assertNotRaises(getter('read_write'))
+        self.assertNotRaises(setter('read_write'), 1)
+        self.assertRaises(AttributeError, deleter('read_write'))
+
+        self.assertNotRaises(getter('read_del'))
+        self.assertRaises(AttributeError, setter('read_del'), 1)
+        self.assertNotRaises(deleter('read_del'))
+
+        self.assertRaises(AttributeError, getter('write_del'))
+        self.assertNotRaises(setter('write_del'), 1)
+        self.assertNotRaises(deleter('write_del'))
+
+        self.assertNotRaises(getter('prop'))
+        self.assertNotRaises(setter('prop'), 1)
+        self.assertNotRaises(deleter('prop'))
+
+    def test_caching(self, Class=None):
+
+        if not Class:
+            class Class(object):
+                data = None
+
+                @cached_property
+                def prop(self):
+                    return self.data
 
         obj = Class()
 
@@ -73,7 +124,56 @@ class CachedPropertyTestCase(AssertNotRaisesMixin, TestCase):
         self.assertTrue(Class.prop.is_cached(obj))
         self.assertEqual(obj.prop, 1)
 
-    def test_invalidating(self):
+    def test_caching_with_read_write(self):
+
+        class Class(object):
+            data = None
+
+            @cached_property
+            def prop(self):
+                return self.data
+
+            @prop.setter
+            def prop(self, value):
+                self.data = value
+
+        self.test_caching(Class)
+
+    def test_caching_with_read_del(self):
+
+        class Class(object):
+            data = None
+
+            @cached_property
+            def prop(self):
+                return self.data
+
+            @prop.deleter
+            def prop(self):
+                del self.data
+
+        self.test_caching(Class)
+
+    def test_caching_with_full_ops(self):
+
+        class Class(object):
+            data = None
+
+            @cached_property
+            def prop(self):
+                return self.data
+
+            @prop.setter
+            def prop(self, value):
+                self.data = value
+
+            @prop.deleter
+            def prop(self):
+                del self.data
+
+        self.test_caching(Class)
+
+    def test_invalidation(self):
 
         class Class(object):
             data = None
