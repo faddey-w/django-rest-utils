@@ -16,35 +16,42 @@ class CachedPropertyTestCase(AssertNotRaisesMixin, TestCase):
 
             read_only = cached_property(
                 fget=lambda this: this.data,
+                name='read_only',
             )
 
             write_only = cached_property(
                 fset=lambda this, value: setattr(this, 'data', value),
+                name='write_only',
             )
 
             del_only = cached_property(
                 fdel=lambda this: delattr(this, 'data'),
+                name='del_only',
             )
 
             read_write = cached_property(
                 fget=lambda this: this.data,
                 fset=lambda this, value: setattr(this, 'data', value),
+                name='read_write',
             )
 
             read_del = cached_property(
                 fget=lambda this: this.data,
                 fdel=lambda this: delattr(this, 'data'),
+                name='read_del',
             )
 
             write_del = cached_property(
                 fset=lambda this, value: setattr(this, 'data', value),
                 fdel=lambda this: delattr(this, 'data'),
+                name='write_del',
             )
 
             prop = cached_property(
                 fget=lambda this: this.data,
                 fset=lambda this, value: setattr(this, 'data', value),
                 fdel=lambda this: delattr(this, 'data'),
+                name='prop',
             )
 
         cls.Class = Class

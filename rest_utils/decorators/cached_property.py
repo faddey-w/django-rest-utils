@@ -4,31 +4,54 @@ from functools import wraps
 from django.utils.decorators import available_attrs
 
 
-class read_only_cached_property(object):
+def _make_getter(prop, fget):
+    def getter(self):
+        cached = fget(self)
+        self.__dict__[prop.name] = cached
+        return cached
+    return getter
 
-    def __init__(self, fget=None, doc=None, name=None):
-        self.getter(fget)
-        self.name = getattr(fget, '__name__', name)
-        assert isinstance(self.name, str), 'Cannot resolve property name'
-        self.__doc__ = doc or fget.__doc__
 
-    def getter(self, function):
-        self.fget = function
-        return self
+def _make_setter(prop, fset):
+    def setter(self, value):
+        fset(self, value)
+        prop._invalidate(self)
+    return setter
 
-    def setter(self, function):
-        return read_write_cached_property(
-            fget=self.fget,
-            fset=function,
-            doc=self.__doc__
+
+def _make_deleter(prop, fdel):
+    def deleter(self):
+        fdel(self)
+        prop._invalidate(self)
+    return deleter
+
+
+class cached_property(property):
+
+    def __init__(self, fget=None, fset=None, fdel=None, doc=None, name=None):
+        resolved_name = name
+        for function in [fget, fset, fdel]:
+            if function:
+                resolved_name = getattr(function, '__name__', None)
+                if resolved_name and resolved_name != '<lambda>':
+                    break
+        assert isinstance(resolved_name, str), 'Cannot resolve property name'
+        self.name = resolved_name
+        super(cached_property, self).__init__(
+            fget=_make_getter(self, fget),
+            fset=_make_setter(self, fset),
+            fdel=_make_deleter(self, fdel),
+            doc=doc,
         )
 
-    def deleter(self, function):
-        return read_write_cached_property(
-            fget=self.fget,
-            fdel=function,
-            doc=self.__doc__
-        )
+    # def getter(self, function):
+    #     return super(cached_property, self).getter(_make_getter(self, function))
+    #
+    # def setter(self, function):
+    #     return super(cached_property, self).setter(_make_setter(self, function))
+    #
+    # def deleter(self, function):
+    #     return super(cached_property, self).deleter(_make_deleter(self, function))
 
     def invalidator(self, function):
         def wrapper(obj, *args, **kwargs):
@@ -42,58 +65,3 @@ class read_only_cached_property(object):
 
     def _invalidate(self, obj):
         obj.__dict__.pop(self.name, None)
-
-    def __get__(self, obj, objtype=None):
-        if obj is None:
-            return self
-        if self.fget is None:
-            raise AttributeError("unreadable attribute")
-        cached = self.fget(obj)
-        obj.__dict__[self.name] = cached
-        return cached
-
-
-_empty = object()
-
-
-class read_write_cached_property(read_only_cached_property):
-
-    def __init__(self, fget=None, fset=None, fdel=None, doc=None, name=None):
-        name = getattr(fset or fdel, '__name__', name)
-        super(read_write_cached_property, self).__init__(fget, doc, name)
-        self.setter(fset)
-        self.deleter(fdel)
-
-    def setter(self, function):
-        self.fset = function
-        return self
-
-    def deleter(self, function):
-        self.fdel = function
-        return self
-
-    def __get__(self, obj, objtype=None):
-        if obj is None:
-            return self
-        cached = obj.__dict__.get(self.name, _empty)
-        if cached is _empty:
-            cached = super(read_write_cached_property, self).__get__(obj, objtype)
-        return cached
-
-    def __set__(self, obj, value):
-        if self.fset is None:
-            raise AttributeError("can't set attribute")
-        self.fset(obj, value)
-        self._invalidate(obj)
-
-    def __delete__(self, obj):
-        if self.fdel:
-            self.fdel(obj)
-        self._invalidate(obj)
-
-
-def cached_property(fget=None, fset=None, fdel=None, doc=None, name=None):
-    if fset or fdel:
-        return read_write_cached_property(fget, fset, fdel, doc, name)
-    else:
-        return read_only_cached_property(fget, doc, name)
