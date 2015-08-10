@@ -65,9 +65,6 @@ class cached_property(property):
             value = obj.__dict__[self.name]
         return value
 
-    # def __set__(self, obj, value):
-    #     return super(cached_property, self).__set__(obj, value)
-
     def invalidator(self, function):
         def wrapper(obj, *args, **kwargs):
             ret = function(obj, *args, **kwargs)
