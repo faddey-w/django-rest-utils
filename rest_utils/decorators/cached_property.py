@@ -5,25 +5,34 @@ from django.utils.decorators import available_attrs
 
 
 def _make_getter(prop, fget):
-    def getter(self):
-        cached = fget(self)
-        self.__dict__[prop.name] = cached
-        return cached
-    return getter
+    if fget:
+        def getter(self):
+            cached = fget(self)
+            self.__dict__[prop.name] = cached
+            return cached
+        return getter
+    else:
+        return None
 
 
 def _make_setter(prop, fset):
-    def setter(self, value):
-        fset(self, value)
-        prop._invalidate(self)
-    return setter
+    if fset:
+        def setter(self, value):
+            fset(self, value)
+            prop._invalidate(self)
+        return setter
+    else:
+        return None
 
 
 def _make_deleter(prop, fdel):
-    def deleter(self):
-        fdel(self)
-        prop._invalidate(self)
-    return deleter
+    if fdel:
+        def deleter(self):
+            fdel(self)
+            prop._invalidate(self)
+        return deleter
+    else:
+        return None
 
 
 class cached_property(property):
@@ -44,14 +53,20 @@ class cached_property(property):
             doc=doc,
         )
 
-    # def getter(self, function):
-    #     return super(cached_property, self).getter(_make_getter(self, function))
-    #
-    # def setter(self, function):
-    #     return super(cached_property, self).setter(_make_setter(self, function))
-    #
-    # def deleter(self, function):
-    #     return super(cached_property, self).deleter(_make_deleter(self, function))
+    def __get__(self, obj, obj_type=None):
+        if obj is None:
+            return self
+        if not self.fget:
+            raise AttributeError('Cannot read attribute {}'.format(self.name))
+        if not self.is_cached(obj):
+            value = super(cached_property, self).__get__(obj, obj_type)
+            obj.__dict__[self.name] = value
+        else:
+            value = obj.__dict__[self.name]
+        return value
+
+    # def __set__(self, obj, value):
+    #     return super(cached_property, self).__set__(obj, value)
 
     def invalidator(self, function):
         def wrapper(obj, *args, **kwargs):
